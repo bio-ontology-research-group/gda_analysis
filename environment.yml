@@ -1,0 +1,9 @@
+name: gda
+channels:
+  - conda-forge
+dependencies:
+  - python=3.10
+  - click
+  - pip
+  - pip:
+    - -r requirements.txt

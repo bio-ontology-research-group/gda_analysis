@@ -1,0 +1,8 @@
+wandb
+scikit-learn
+tqdm
+git+https://github.com/bio-ontology-research-group/mowl
+pandas
+requests
+wget
+torch
