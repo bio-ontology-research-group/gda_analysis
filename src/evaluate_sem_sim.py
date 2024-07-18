@@ -2,6 +2,8 @@ import sys
 from scipy.stats import rankdata
 import numpy as np
 
+import torch as th
+
 def compute_rank_roc(ranks, num_entities):
     n_tails = num_entities
                     
@@ -56,15 +58,26 @@ micro_ranks = dict()
 num_results_per_disease = dict()
 
 # results = results[:2]
+
+genes_ids = th.arange(len(results[0][3:]))
+
 for i in range(len(results)):
     disease = results[i][1]
-    position = results[i][2]
+    position = int(results[i][2])
     scores = results[i][3:]
     scores = [-float(x) for x in scores]
-    
 
-    ordering = rankdata(scores, method='average')
-    rank = ordering[int(position)]
+    perm = th.randperm(len(scores))
+    scores = th.tensor(scores)
+
+    updated_position = th.where(genes_ids[perm] == position)[0].item()
+    scores = scores[perm]
+    
+    order = th.argsort(scores, descending=False)
+    rank = th.where(order == updated_position)[0].item() + 1
+    
+    # ordering = rankdata(scores, method='average')
+    # rank = ordering[int(position)]
 
     mr += rank
     mrr += 1 / rank

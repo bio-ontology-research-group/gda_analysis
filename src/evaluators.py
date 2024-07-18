@@ -127,15 +127,15 @@ class Evaluator:
 
                 for i, tail in enumerate(aux_tails):
                     head = aux_heads[i]
-                    head = th.where(self.evaluation_heads == head)[0].item()
+                    perm = th.randperm(num_heads)
+                    head = th.where(self.evaluation_heads[perm] == head)[0].item()
                     tail = th.where(self.evaluation_tails == tail)[0].item()
-                    preds = logits_tails[i]
 
-                    if self.evaluate_with_deductive_closure:
-                        ded_labels = deductive_labels[:, tail].to(preds.device)
-                        ded_labels[head] = 1
-                        preds = preds * ded_labels
                     
+                    # updated_head = th.where(self.evaluation_heads[perm] == head)[0].item()
+                    preds = logits_tails[i]
+                    preds = preds[perm]
+
                     order = th.argsort(preds, descending=False)
                     # rank = order[head].item() + 1
                     rank = th.where(order == head)[0].item() + 1
@@ -165,14 +165,9 @@ class Evaluator:
                     if mode == "test":
                         
                         # tail_id = self.class_id_to_tail_id[tail]
-                        f_preds = preds * filtering_labels[:, tail].to(preds.device)
+                        filtering_mask = filtering_labels[:, tail][perm].to(preds.device)
+                        f_preds = preds * filtering_mask
 
-                        if self.evaluate_with_deductive_closure:
-                            ded_labels = deductive_labels[:, tail].to(preds.device)
-                            ded_labels[head] = 1
-                            f_preds = f_preds * ded_labels
-
-                        
                         f_order = th.argsort(f_preds, descending=False)
                         f_rank = th.where(f_order == head)[0].item() + 1
                         fmr += f_rank
