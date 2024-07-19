@@ -29,7 +29,6 @@ th.autograd.set_detect_anomaly(True)
 @ck.option("--embed_dim", "-dim", default=50, help="Embedding dimension")
 @ck.option("--batch_size", "-bs", default=800000, help="Batch size")
 @ck.option("--module_margin", "-mm", default=0.1, help="Margin for the module")
-@ck.option("--loss_margin", "-lm", default=0.1, help="Margin for the loss function")
 @ck.option("--learning_rate", "-lr", default=0.001, help="Learning rate")
 @ck.option("--epochs", "-e", default=4000, help="Number of epochs")
 @ck.option("--evaluate_every", "-every", default=50, help="Evaluate every n epochs")
@@ -38,7 +37,7 @@ th.autograd.set_detect_anomaly(True)
 @ck.option("--no_sweep", "-ns", is_flag=True)
 @ck.option("--only_test", "-ot", is_flag=True)
 def main(dataset_name, evaluator_name, embed_dim, batch_size,
-         module_margin, loss_margin, learning_rate, epochs,
+         module_margin, learning_rate, epochs,
          evaluate_every, device, wandb_description, no_sweep,
          only_test):
 
@@ -63,11 +62,11 @@ def main(dataset_name, evaluator_name, embed_dim, batch_size,
     model_dir = f"{root_dir}/../models/"
     os.makedirs(model_dir, exist_ok=True)
 
-    model_filepath = f"{model_dir}/elem_{embed_dim}_{batch_size}_{module_margin}_{loss_margin}_{learning_rate}.pt"
+    model_filepath = f"{model_dir}/elem_{embed_dim}_{batch_size}_{module_margin}_{learning_rate}.pt"
     model = GeometricELModel(evaluator_name, dataset, batch_size,
-                             embed_dim, module_margin, loss_margin,
-                             learning_rate, model_filepath,
-                             epochs, evaluate_every, device, wandb_logger)
+                             embed_dim, module_margin, learning_rate,
+                             model_filepath, epochs, evaluate_every,
+                             device, wandb_logger)
 
     
     if not only_test:
@@ -78,8 +77,11 @@ def main(dataset_name, evaluator_name, embed_dim, batch_size,
     print_as_md(macro_metrics)
     print("\nTest micro metrics")
     print_as_md(micro_metrics)
-             
-    # wandb_logger.log(metrics)
+
+    micro_metrics = {f"micro_{k}": v for k, v in micro_metrics.items()}
+    macro_metrics = {f"macro_{k}": v for k, v in macro_metrics.items()}
+    wandb_logger.log({**micro_metrics, **macro_metrics})
+        
         
 
 def print_as_md(overall_metrics):
@@ -128,9 +130,8 @@ def evaluator_resolver(evaluator_name, *args, **kwargs):
 
 
 class GeometricELModel(EmbeddingELModel):
-    def __init__(self, evaluator_name, dataset,
-                 batch_size, embed_dim, module_margin, loss_margin,
-                 learning_rate, model_filepath, epochs,
+    def __init__(self, evaluator_name, dataset, batch_size, embed_dim,
+                 module_margin, learning_rate, model_filepath, epochs,
                  evaluate_every, device, wandb_logger):
         super().__init__(dataset, embed_dim, batch_size, model_filepath=model_filepath, load_normalized=True)
 
@@ -144,7 +145,6 @@ class GeometricELModel(EmbeddingELModel):
         self.learning_rate = learning_rate
         self.epochs = epochs
         self.evaluate_every = evaluate_every
-        self.loss_margin = loss_margin
         self.device = device
         self.wandb_logger = wandb_logger
 
@@ -203,42 +203,7 @@ class GeometricELModel(EmbeddingELModel):
                 pos_logits = self.module(batch_data, "gci2").mean()
                 loss += pos_logits * dls_weights["gci2"]
 
-                
-                # rels = batch_data[:, 0]
-                # gene_disease_mask = rels == relations_to_idx["http://mowl.borg/associated_with"]
-                # gene_phenotype_mask = rels == relations_to_idx["http://mowl.borg/has_phenotype"]
-                # disease_phenotype_mask = rels == relations_to_idx["http://mowl.borg/has_symptom"]
-                # extra_mask = ~(gene_disease_mask)
-                # extra_mask = ~(gene_disease_mask | gene_phenotype_mask | disease_phenotype_mask)
-
-                # gene_disease_data = batch_data[gene_disease_mask]
-                # gene_phenotype_data = batch_data[gene_phenotype_mask]
-                # disease_phenotype_data = batch_data[disease_phenotype_mask]
-                # extra_data = batch_data[extra_mask]
-
-                # neg_ids_gene_disease = th.randint(0, len(gene_ids), (len(gene_disease_data),), device=self.device)
-                # neg_ids_gene_disease = gene_ids[neg_ids_gene_disease]
-
-                # neg_ids_gene_phenotype = th.randint(0, len(gene_ids), (len(gene_phenotype_data),), device=self.device)
-                # neg_ids_gene_phenotype = gene_ids[neg_ids_gene_phenotype]
-
-                # neg_ids_disease_phenotype = th.randint(0, len(disease_ids), (len(disease_phenotype_data),), device=self.device)
-                # neg_ids_disease_phenotype = disease_ids[neg_ids_disease_phenotype]
-                
-                # neg_ids_extra = th.randint(0, num_classes, (len(extra_data),), device=self.device)
-                
-                # neg_batch_gene_disease = th.cat([neg_ids_gene_disease.unsqueeze(1), gene_disease_data[:, 1:]], dim=1)
-                # neg_batch_gene_phenotype = th.cat([neg_ids_gene_phenotype.unsqueeze(1), gene_phenotype_data[:, 1:]], dim=1)
-                # neg_batch_disease_phenotype = th.cat([neg_ids_disease_phenotype.unsqueeze(1), disease_phenotype_data[:, 1:]], dim=1)
-                # neg_batch_extra = th.cat([neg_ids_extra.unsqueeze(1), extra_data[:, 1:]], dim=1)
-                
-                # loss += self.module(neg_batch_gene_disease, "gci2", neg=True).mean()
-                # loss += self.module(neg_batch_gene_phenotype, "gci2", neg=True).mean()
-                # loss += self.module(neg_batch_disease_phenotype, "gci2", neg=True).mean()
-                # loss += self.module(neg_batch_extra, "gci2", neg=True).mean()
-                
-                
-                neg_idxs = th.randint(0, num_classes, (len(batch_data),), device=self.device)
+                neg_idxs = th.randint(0, len(gene_classes), (len(batch_data),), device=self.device)
                 # neg_idxs = gene_ids[neg_idxs]
                 neg_batch = th.cat([neg_idxs.unsqueeze(1), batch_data[:, 1:]], dim=1)
                 neg_logits = self.module(neg_batch, "gci2", neg=True).mean()
