@@ -8,7 +8,7 @@ from mowl.owlapi import OWLAPIAdapter
 from mowl.projection import OWL2VecStarProjector
 from mowl.walking import DeepWalk
 
-from pykeen.models import TransE
+from pykeen.models import TransE, DistMult
 
 from evaluators import GDAEvaluator
 from dataset import GDADataset
@@ -94,6 +94,8 @@ def main(kge_model, embedding_dimension, learning_rate, batch_size,
 def kge_method_resolver(kge_method):
     if kge_method.lower() == "transe":
         return TransE
+    elif kge_method.lower() == "distmult":
+        return DistMult
     else:
         raise ValueError(f"KGE method {kge_method} not supported")
 
