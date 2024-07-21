@@ -64,7 +64,7 @@ def main(kge_model, embedding_dimension, learning_rate, batch_size,
     model.optimizer = th.optim.Adam
     model.lr = learning_rate
     model.batch_size = batch_size
-    model.set_kge_method(kge_method_resolver(kge_model))
+    model.set_kge_method(kge_method_resolver(kge_model), embedding_dim=embedding_dimension, random_seed=42)
 
     device = th.device("cuda" if th.cuda.is_available() else "cpu")
     model.set_evaluator(GDAEvaluator, device)
