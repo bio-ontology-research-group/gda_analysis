@@ -31,7 +31,7 @@ logger.setLevel(logging.INFO)
 def main(embedding_dimension, epochs, window_size, num_walks,
          walk_length, wandb_description, no_sweep, only_test):
 
-    wandb_logger = wandb.init(entity='ferzcam', project='gda_analysis', group='opa2vec', name=wandb_description)
+    wandb_logger = wandb.init(entity='ferzcam', project='gda_analysis', group='owl2vec', name=wandb_description)
 
     if no_sweep:
         wandb_logger.log({'embedding_dimension': embedding_dimension,
@@ -71,6 +71,8 @@ def main(embedding_dimension, epochs, window_size, num_walks,
         model.w2v_model.save(model_filepath)
     else:
         model.from_pretrained(model_filepath)
+
+    os.remove(corpus_filepath)
         
     model.evaluate()
 

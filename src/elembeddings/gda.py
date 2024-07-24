@@ -46,13 +46,11 @@ def main(dataset_name, evaluator_name, embed_dim, batch_size,
     wandb_logger = wandb.init(entity="ferzcam", project="gda_book_chapter", group="elembeddings", name=wandb_description)
 
     if no_sweep:
-        wandb_logger.log({"dataset_name": dataset_name,
-                          "embed_dim": embed_dim,
+        wandb_logger.log({"embed_dim": embed_dim,
                           "module_margin": module_margin,
                           "learning_rate": learning_rate
                           })
     else:
-        dataset_name = wandb.config.dataset_name
         embed_dim = wandb.config.embed_dim
         module_margin = wandb.config.module_margin
         learning_rate = wandb.config.learning_rate
